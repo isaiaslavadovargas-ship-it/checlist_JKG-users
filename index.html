@@ -81,7 +81,7 @@ h2{font:700 20px/1.1 'Barlow Condensed',Impact,sans-serif;margin:0 0 8px}
     <label for="op">Operador</label>
     <select id="op"><option value="">Seleccionar</option></select>
     <label for="tn">Turno</label>
-    <select id="tn"><option value="Día">Día</option><option value="Noche">Noche</option></select>
+    <select id="tn" disabled aria-label="Turno automático"><option value="Día">Día</option><option value="Noche">Noche</option></select>
     <label for="hr">Horómetro</label>
     <input id="hr" type="text" inputmode="decimal" maxlength="7" autocomplete="off" placeholder="Ej. 23456.0">
   </div>
@@ -110,7 +110,7 @@ const pad=n=>String(n).padStart(2,"0");
 const esc=x=>x.replace(/&/g,"&amp;").replace(/</g,"&lt;");
 function opts(sel,groups){sel.innerHTML="";groups.forEach(([lab,list])=>{const g=document.createElement("optgroup");g.label=lab;list.forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;g.appendChild(o)});sel.appendChild(g)})}
 const rng=(n,f)=>Array.from({length:n},(_,i)=>f(pad(i+1)));
-const hh=new Date().getHours();$("tn").value=(hh>=6&&hh<18)?"Día":"Noche";
+async function turnoAhora(){const r=await fetch(SB+"/rest/v1/rpc/turno_actual",{method:"POST",headers:{...H,"Content-Type":"application/json"},body:"{}"});if(!r.ok)throw new Error("turno");return r.json()}
 function build(){let h="",n=0;items=[];
   SEC.forEach(([k,g,its],si)=>{
     h+='<div class="card"><h2>'+(k==="Tractor"?"Tractor · ":"")+g+'</h2>';
@@ -152,6 +152,7 @@ $("send").addEventListener("click",async()=>{
     (miss.length&&op&&hr?$("i"+miss[0].id):$("form")).scrollIntoView({behavior:"smooth",block:"center"});return}
   er.style.display="none";
   const btn=$("send");btn.disabled=true;btn.textContent="Enviando…";
+  try{$("tn").value=await turnoAhora()}catch(_){}
   const otrosTxt=SEC.map((x,i)=>$("o"+i).value.trim()?x[1]+": "+$("o"+i).value.trim():"").filter(Boolean).join(" | ");
   const resp=items.map(i=>({item_id:i.db,estado:st[i.id]==="fail"?"falla":"ok",observacion:st[i.id]==="fail"?$("n"+i.id).value.trim():null}));
   try{const r=await fetch(SB+"/rest/v1/rpc/enviar_revision",{method:"POST",headers:{...H,"Content-Type":"application/json"},body:JSON.stringify({p_operador:+opId,p_tractor:ID.t[$("tr").value],p_implemento:ID.i[$("df").value],p_horometro:parseFloat(hr),p_turno:$("tn").value,p_respuestas:resp,p_otros:otrosTxt||null})});
@@ -181,7 +182,7 @@ function llenar(){
 async function init(){
   $("list").innerHTML='<p class="nn" style="text-align:center;padding:20px">Cargando…</p>';
   try{await cargar()}catch(_){$("list").innerHTML='<div class="card"><p>No se pudo cargar la información. Revisa tu conexión.</p><button class="cta" id="reint">Reintentar</button></div>';$("reint").onclick=init;return}
-  llenar();build()}
+  llenar();try{$("tn").value=await turnoAhora()}catch(_){}build()}
 init();
 function fmtHr(v){if(/^\d{1,5}$/.test(v))return v+".0";if(/^\d{1,5}\.$/.test(v))return v+"0";return v}
 $("hr").addEventListener("input",e=>{let v=e.target.value.replace(/,/g,".").replace(/[^0-9.]/g,"");const i=v.indexOf(".");let a=i<0?v:v.slice(0,i),b=i<0?null:v.slice(i+1).replace(/\./g,"");a=a.slice(0,5);v=b===null?a:a+"."+b.slice(0,1);e.target.value=v});
