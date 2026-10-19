@@ -278,12 +278,15 @@ document.querySelectorAll(".eye").forEach(b=>{
   b.addEventListener("click",()=>{const i=$(b.dataset.t),v=i.type==="password";i.type=v?"text":"password";
     b.classList.toggle("off",v);b.setAttribute("aria-pressed",String(v));b.setAttribute("aria-label",v?"Ocultar contraseña":"Mostrar contraseña")})});
 async function entrada(){
-  show("sData");let net=false;MI=null;
+  let net=false;MI=null;
   try{const r=await F(SB+"/rest/v1/rpc/mi_operador",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});const j=r.ok?await r.json():[];MI=j[0]||null}catch(e){net=e instanceof TypeError}
-  await init();
-  const e=$("err2");
-  if(!MI){e.style.display="block";e.textContent=net?"Sin conexión. Revisa tu internet e inténtalo de nuevo.":"Tu cuenta no está vinculada a un operador. Contacta al administrador.";$("next").disabled=true}
-  else{e.style.display="none";$("next").disabled=false}}
+  if(!MI){
+    try{if(S&&!net)await fetch(SB+"/auth/v1/logout?scope=local",{method:"POST",headers:{apikey:KEY,Authorization:"Bearer "+S.at}})}catch(_){}
+    clearS();const m=$("lgMsg");m.className="ms er";
+    m.textContent=net?"Sin conexión. Revisa tu internet e inténtalo de nuevo.":"Esta cuenta no está registrada como operador. Contacta al administrador.";
+    show("sLogin");return false}
+  show("sData");await init();
+  $("err2").style.display="none";$("next").disabled=false;return true}
 $("lgForm").addEventListener("submit",async e=>{e.preventDefault();
   const m=$("lgMsg"),b=e.target.querySelector(".bt"),u=$("lgUser").value.trim().toLowerCase(),p=$("lgPass").value;
   if(!u||!p){m.className="ms er";m.textContent="Ingresa tu correo y contraseña.";return}
